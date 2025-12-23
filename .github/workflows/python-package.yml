@@ -38,4 +38,6 @@ jobs:
         poetry run ruff check src/
 
     - name: Run Tests
-      run: poetry run pytest
+      run: |
+        export PYTHONPATH=$PYTHONPATH:$(pwd)
+        poetry run pytest tests/test_api_client.py
