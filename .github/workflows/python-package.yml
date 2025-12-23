@@ -36,3 +36,6 @@ jobs:
       run: |
         poetry add --group dev ruff
         poetry run ruff check src/
+
+    - name: Run Tests
+      run: poetry run pytest
