@@ -27,7 +27,7 @@ class BookAPI:
                     "published_date": volume_info.get("publishedDate", "N/A"),
                     "language": volume_info.get("language", "unknown"),
                     "page_count": volume_info.get("pageCount", 0),
-                    "categories": ", ".join(volume_info.get("categories", ["N/A"]))
+                    "categories": ", ".join(volume_info.get("categories", ["N/A"])),
                 }
             return None
         except requests.exceptions.RequestException as e:
