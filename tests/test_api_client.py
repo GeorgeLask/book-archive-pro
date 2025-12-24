@@ -9,13 +9,15 @@ def test_fetch_by_isbn_success(mocker):
     mock_response = mocker.Mock()
     mock_response.status_code = 200
     mock_response.json.return_value = {
-        "items": [{
-            "volumeInfo": {
-                "title": "Zorba the Greek",
-                "authors": ["Nikos Kazantzakis"],
-                "language": "el"
+        "items": [
+            {
+                "volumeInfo": {
+                    "title": "Zorba the Greek",
+                    "authors": ["Nikos Kazantzakis"],
+                    "language": "el",
+                }
             }
-        }]
+        ]
     }
     mocker.patch("requests.get", return_value=mock_response)
 
