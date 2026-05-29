@@ -32,12 +32,8 @@ jobs:
     - name: Install dependencies
       run: poetry install --no-interaction --no-root
 
-    - name: Lint with Ruff (Optional but recommended)
-      run: |
-        poetry add --group dev ruff
-        poetry run ruff check src/
+    - name: Lint with Ruff
+      run: poetry run ruff check .
 
     - name: Run Tests
-      run: |
-        export PYTHONPATH=$PYTHONPATH:$(pwd)
-        poetry run pytest tests/test_api_client.py
+      run: poetry run pytest

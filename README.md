@@ -1,17 +1,74 @@
 # 📚 Book Archive Pro
 
-A professional Python-based book archiving tool that uses computer vision to scan ISBN barcodes and automatically fetch metadata via the Google Books API.
+A Python tool for cataloguing your book collection. Scan ISBN barcodes with
+your webcam, fetch metadata automatically, and manage everything from the
+command line.
 
 ## ✨ Features
-- **Real-time Barcode Scanning**: OpenCV + Pyzbar integration.
-- **Automated Metadata**: Fetches Title, Author, Publisher, and Categories.
-- **Greek Language Support**: UTF-8-sig encoding for perfect Excel compatibility.
-- **Automated CI/CD**: GitHub Actions pipeline for code quality.
+- **Real-time barcode scanning** — OpenCV + pyzbar.
+- **Automated metadata** — Google Books with an OpenLibrary fallback, plus
+  manual entry when neither has the book.
+- **Duplicate-safe** — books already in the archive are skipped across runs.
+- **Collection management** — list, search, stats, remove, and status
+  tracking (`collection` / `wishlist` / `read` / `lent`) from the CLI.
+- **Greek language support** — UTF-8-sig encoding for clean Excel display.
 
-## 🛠 Installation & Setup
+## 🛠 Installation
 
-### 1. System Requirements (macOS)
-The barcode engine requires the `zbar` system library. This is a C-library that Poetry cannot install directly.
+### 1. System requirements (macOS)
+The barcode engine needs the `zbar` C library, which Poetry cannot install:
 ```bash
 brew install zbar
+```
+
+### 2. Python dependencies
+```bash
 poetry install --no-root
+```
+
+### 3. macOS: make `zbar` discoverable
+On Apple Silicon, pyzbar may not find the Homebrew `zbar` library on the
+default loader path. Run scanning commands with:
+```bash
+DYLD_LIBRARY_PATH=/opt/homebrew/lib poetry run python main.py scan
+```
+> Only the `scan` command needs `zbar`. The management commands below work
+> without it.
+
+## 🚀 Usage
+
+```bash
+python main.py <command> [options]
+```
+
+| Command | Description |
+|---|---|
+| `scan` | Scan barcodes and archive books (default if no command given). |
+| `list [--status S]` | List archived books, optionally filtered by status. |
+| `search <query>` | Search by ISBN, title, or author. |
+| `stats` | Show collection statistics. |
+| `remove <isbn>` | Remove a book by ISBN. |
+| `set-status <isbn> <status>` | Set a book's status. |
+
+`--status` / `<status>` is one of `collection`, `wishlist`, `read`, `lent`.
+Use `--file PATH` to point at a different archive (default `data/library.csv`).
+
+### Examples
+```bash
+python main.py scan
+python main.py list --status wishlist
+python main.py search kazantzakis
+python main.py stats
+python main.py set-status 9789601678375 read
+python main.py remove 9789601678375
+```
+
+## 🧪 Development
+
+```bash
+poetry run pytest        # run the test suite
+poetry run ruff check .  # lint
+```
+
+The CI pipeline (GitHub Actions) runs ruff and the full test suite on every
+push and pull request to `main`.
