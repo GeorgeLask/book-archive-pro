@@ -6,10 +6,13 @@ def _seed_file(tmp_path):
 
     path = str(tmp_path / "lib.csv")
     db = BookDatabase(file_path=path)
-    db.save_book({"isbn": "111", "title": "Zorba", "authors": "Kazantzakis",
-                  "language": "el"})
-    db.save_book({"isbn": "222", "title": "1984", "authors": "Orwell",
-                  "language": "en"}, status="wishlist")
+    db.save_book(
+        {"isbn": "111", "title": "Zorba", "authors": "Kazantzakis", "language": "el"}
+    )
+    db.save_book(
+        {"isbn": "222", "title": "1984", "authors": "Orwell", "language": "en"},
+        status="wishlist",
+    )
     return path
 
 
