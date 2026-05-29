@@ -3,6 +3,33 @@ import os
 
 
 class BookDatabase:
+    # Canonical column order. New fields are appended here over time; rows
+    # written before a field existed are migrated to it on the next save.
+    SCHEMA = [
+        "isbn",
+        "title",
+        "authors",
+        "publisher",
+        "published_date",
+        "language",
+        "page_count",
+        "categories",
+        "source",
+        "status",
+    ]
+    DEFAULTS = {
+        "isbn": "",
+        "title": "N/A",
+        "authors": "Unknown",
+        "publisher": "N/A",
+        "published_date": "N/A",
+        "language": "unknown",
+        "page_count": 0,
+        "categories": "N/A",
+        "source": "unknown",
+        "status": "collection",
+    }
+
     def __init__(self, file_path="data/library.csv"):
         self.file_path = file_path
         os.makedirs(os.path.dirname(self.file_path), exist_ok=True)
@@ -31,20 +58,31 @@ class BookDatabase:
 
     def save_book(self, book_data: dict, status="collection"):
         """
-        Appends book data with a status.
-        Uses a comma separator but forces quoting to prevent Excel cell merging.
+        Saves a book row, keeping the file aligned to the canonical SCHEMA.
+
+        Rather than blind-appending (which misaligns columns once the schema
+        grows), this reads any existing rows, migrates them to the current
+        SCHEMA, appends the new row, and rewrites the whole file. utf-8-sig
+        with quote-all keeps Greek text and cell boundaries correct in Excel.
         """
-        book_data["status"] = status
-        df = pd.DataFrame([book_data])
+        row = {**self.DEFAULTS, **book_data, "status": status}
+        new_row = pd.DataFrame([row], columns=self.SCHEMA)
 
-        file_exists = os.path.isfile(self.file_path)
+        if os.path.isfile(self.file_path):
+            existing = pd.read_csv(
+                self.file_path, encoding="utf-8-sig", dtype={"isbn": str}
+            )
+            # Add any columns introduced after these rows were written.
+            existing = existing.reindex(columns=self.SCHEMA)
+            for col, default in self.DEFAULTS.items():
+                existing[col] = existing[col].fillna(default)
+            combined = pd.concat([existing, new_row], ignore_index=True)
+        else:
+            combined = new_row
 
-        # We use 'utf-8-sig' and quote all strings so Excel separates them correctly
-        df.to_csv(
+        combined.to_csv(
             self.file_path,
-            mode="a",
             index=False,
-            header=not file_exists,
             encoding="utf-8-sig",
             sep=",",  # Standard comma
             quoting=1,  # Quote All: forces Excel to see separate cells
