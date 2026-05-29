@@ -40,6 +40,42 @@ def test_load_isbns_and_exists(tmp_path):
     assert db.exists("999") is False
 
 
+def test_save_migrates_old_rows_to_current_schema(tmp_path):
+    import pandas as pd
+
+    # Simulate a legacy file with the original 8-column schema (no
+    # status/source) — the shape of the real data/library.csv.
+    legacy = tmp_path / "lib.csv"
+    pd.DataFrame(
+        [
+            {
+                "isbn": "111",
+                "title": "Old Book",
+                "authors": "A",
+                "publisher": "P",
+                "published_date": "2000",
+                "language": "el",
+                "page_count": 100,
+                "categories": "Fiction",
+            }
+        ]
+    ).to_csv(legacy, index=False, encoding="utf-8-sig")
+
+    db = BookDatabase(file_path=str(legacy))
+    db.save_book({"isbn": "222", "title": "New Book", "source": "google"})
+
+    df = pd.read_csv(legacy, encoding="utf-8-sig", dtype={"isbn": str})
+
+    # Columns are now the full canonical schema, in order, with no misalignment.
+    assert list(df.columns) == BookDatabase.SCHEMA
+    old = df[df["isbn"] == "111"].iloc[0]
+    assert old["title"] == "Old Book"
+    assert old["status"] == "collection"  # backfilled default
+    assert old["source"] == "unknown"  # backfilled default
+    new = df[df["isbn"] == "222"].iloc[0]
+    assert new["source"] == "google"
+
+
 def test_exists_treats_isbn_as_string(tmp_path):
     # ISBNs are long numeric strings; make sure leading-zero / int coercion
     # does not break matching.
