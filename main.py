@@ -8,13 +8,17 @@ def run_archiver(scanner, api, db):
     The Business Logic: Orchestrates the flow between
     hardware (scanner), web (api), and storage (db).
     """
-    processed_isbns = set()
+    # Seed from the existing archive so books scanned in previous runs are
+    # recognised as duplicates, not re-added.
+    processed_isbns = db.load_isbns()
 
     print("--- Professional Book Archiver Initialized ---")
+    print(f"Archive contains {len(processed_isbns)} book(s).")
     print("Scanner active. Press 'q' in the window or Ctrl+C here to stop.")
 
     for isbn in scanner.scan():
         if isbn in processed_isbns:
+            print(f"\n[=] ISBN {isbn} already in collection. Skipping.")
             continue
 
         print(f"\n[+] Found ISBN: {isbn}")
