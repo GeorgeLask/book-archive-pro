@@ -1,9 +1,33 @@
 import argparse
+import os
+import sys
 
 import pandas as pd
 
 from src.api_client import BookAPI
 from src.database import BookDatabase
+
+# On Apple Silicon, pyzbar can't find the Homebrew `zbar` library because
+# /opt/homebrew/lib isn't on the dynamic loader's search path.
+_ZBAR_LIB_DIR = "/opt/homebrew/lib"
+
+
+def _ensure_zbar_on_path():
+    """
+    DYLD_LIBRARY_PATH is read by the loader only at process start, so adding it
+    at runtime is not enough: we set it and re-exec the process once. The
+    membership check prevents an infinite loop. No-op off macOS or if the
+    directory is absent, so Linux and CI are unaffected.
+    """
+    if sys.platform != "darwin" or not os.path.isdir(_ZBAR_LIB_DIR):
+        return
+    if _ZBAR_LIB_DIR in os.environ.get("DYLD_LIBRARY_PATH", "").split(":"):
+        return
+    existing = os.environ.get("DYLD_LIBRARY_PATH", "")
+    os.environ["DYLD_LIBRARY_PATH"] = (
+        f"{_ZBAR_LIB_DIR}:{existing}" if existing else _ZBAR_LIB_DIR
+    )
+    os.execv(sys.executable, [sys.executable] + sys.argv)
 
 
 def manual_entry(isbn, input_fn=input):
@@ -91,8 +115,9 @@ def _print_table(df):
 
 def cmd_scan(db, args):
     """Runs the interactive barcode-scanning archiver."""
-    # Imported lazily so the management commands don't require the camera /
-    # zbar stack just to list or search the collection.
+    # Make sure the zbar library is loadable, then import lazily so the
+    # management commands don't require the camera / zbar stack at all.
+    _ensure_zbar_on_path()
     from src.scanner import BarcodeScanner
 
     scanner = BarcodeScanner()
@@ -145,6 +170,13 @@ def cmd_stats(db, args):
         print(f"  {author}: {count}")
 
 
+def cmd_export(db, args):
+    """Exports the collection (optionally filtered) to a CSV file."""
+    count = db.export_to(args.output, args.status)
+    suffix = f" ({args.status})" if args.status else ""
+    print(f"[✔] Exported {count} book(s){suffix} to {args.output}.")
+
+
 def cmd_remove(db, args):
     """Removes a book by ISBN."""
     if db.remove(args.isbn):
@@ -184,6 +216,12 @@ def build_parser():
 
     sub.add_parser("stats", help="Show collection statistics.")
 
+    p_export = sub.add_parser("export", help="Export the collection to a CSV file.")
+    p_export.add_argument("output", help="Path to write the CSV to.")
+    p_export.add_argument(
+        "--status", choices=STATUSES, help="Only export books with this status."
+    )
+
     p_remove = sub.add_parser("remove", help="Remove a book by ISBN.")
     p_remove.add_argument("isbn", help="ISBN to remove.")
 
@@ -199,6 +237,7 @@ COMMANDS = {
     "list": cmd_list,
     "search": cmd_search,
     "stats": cmd_stats,
+    "export": cmd_export,
     "remove": cmd_remove,
     "set-status": cmd_set_status,
 }
