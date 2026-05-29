@@ -32,6 +32,15 @@ loader path. The app handles this automatically — when you run `scan` it adds
 `/opt/homebrew/lib` to the loader path and relaunches itself — so no extra
 setup or environment variables are needed.
 
+### Google Books API key (optional)
+Metadata lookups use Google Books (anonymous), falling back to OpenLibrary.
+Anonymous Google requests are rate-limited and can return `429 Too Many
+Requests` when scanning several books quickly; the app retries with backoff
+and then falls back. To raise the limit, set an API key:
+```bash
+export GOOGLE_BOOKS_API_KEY=your_key_here
+```
+
 ## 🚀 Usage
 
 ```bash

@@ -6,8 +6,17 @@ from src.api_client import BookAPI
 def _mock_response(mocker, payload):
     resp = mocker.Mock()
     resp.status_code = 200
+    resp.headers = {}
     resp.json.return_value = payload
     resp.raise_for_status.return_value = None
+    return resp
+
+
+def _mock_429(mocker):
+    resp = mocker.Mock()
+    resp.status_code = 429
+    resp.headers = {}
+    resp.raise_for_status.side_effect = requests.exceptions.HTTPError("429")
     return resp
 
 
@@ -65,6 +74,56 @@ def test_falls_back_to_openlibrary_when_google_empty(mocker):
     assert result["publisher"] == "Hestia"
     assert result["page_count"] == 330
     assert result["source"] == "openlibrary"
+
+
+def test_google_retries_on_429_then_succeeds(mocker):
+    api = BookAPI()
+    sleep = mocker.patch("time.sleep")
+
+    success = _mock_response(
+        mocker, {"items": [{"volumeInfo": {"title": "Recovered", "language": "en"}}]}
+    )
+    # First Google call is rate-limited, retry succeeds.
+    mocker.patch("requests.get", side_effect=[_mock_429(mocker), success])
+
+    result = api.fetch_by_isbn("123")
+
+    assert result["title"] == "Recovered"
+    assert result["source"] == "google"
+    sleep.assert_called_once()  # backed off before retrying
+
+
+def test_google_exhausts_retries_then_falls_back(mocker):
+    api = BookAPI()
+    mocker.patch("time.sleep")
+    isbn = "123"
+
+    ol = _mock_response(
+        mocker, {f"ISBN:{isbn}": {"title": "From OL", "authors": [{"name": "X"}]}}
+    )
+    # Google returns 429 for the initial call + every retry, then OpenLibrary.
+    google_429s = [_mock_429(mocker) for _ in range(BookAPI.MAX_RETRIES + 1)]
+    mocker.patch("requests.get", side_effect=google_429s + [ol])
+
+    result = api.fetch_by_isbn(isbn)
+
+    assert result["source"] == "openlibrary"
+
+
+def test_api_key_added_when_env_set(mocker, monkeypatch):
+    monkeypatch.setenv("GOOGLE_BOOKS_API_KEY", "secret123")
+    api = BookAPI()
+    get = mocker.patch(
+        "requests.get",
+        return_value=_mock_response(
+            mocker, {"items": [{"volumeInfo": {"title": "T"}}]}
+        ),
+    )
+
+    api.fetch_by_isbn("123")
+
+    _, kwargs = get.call_args
+    assert kwargs["params"].get("key") == "secret123"
 
 
 def test_fetch_by_isbn_not_found_anywhere(mocker):
