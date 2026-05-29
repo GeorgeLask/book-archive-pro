@@ -49,6 +49,23 @@ def test_stats(tmp_path, capsys):
     assert "wishlist: 1" in out
 
 
+def test_export(tmp_path, capsys):
+    path = _seed_file(tmp_path)
+    out = tmp_path / "export.csv"
+    main.main(["--file", path, "export", str(out)])
+    output = capsys.readouterr().out
+    assert "Exported 2 book(s)" in output
+    assert out.exists()
+
+
+def test_export_filtered_by_status(tmp_path, capsys):
+    path = _seed_file(tmp_path)
+    out = tmp_path / "wishlist.csv"
+    main.main(["--file", path, "export", str(out), "--status", "wishlist"])
+    output = capsys.readouterr().out
+    assert "Exported 1 book(s) (wishlist)" in output
+
+
 def test_remove(tmp_path, capsys):
     path = _seed_file(tmp_path)
     main.main(["--file", path, "remove", "111"])

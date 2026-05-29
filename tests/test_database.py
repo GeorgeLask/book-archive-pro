@@ -119,6 +119,21 @@ def test_set_status(tmp_path):
     assert db.set_status("999", "read") is False
 
 
+def test_export_all_and_filtered(tmp_path):
+    import pandas as pd
+
+    db = _seed(tmp_path)
+
+    out_all = tmp_path / "all.csv"
+    assert db.export_to(str(out_all)) == 2
+    assert set(pd.read_csv(out_all, dtype={"isbn": str})["isbn"]) == {"111", "222"}
+
+    out_wish = tmp_path / "sub" / "wishlist.csv"
+    assert db.export_to(str(out_wish), status="wishlist") == 1
+    df = pd.read_csv(out_wish, dtype={"isbn": str})
+    assert list(df["isbn"]) == ["222"]
+
+
 def test_exists_treats_isbn_as_string(tmp_path):
     # ISBNs are long numeric strings; make sure leading-zero / int coercion
     # does not break matching.

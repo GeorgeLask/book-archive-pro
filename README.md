@@ -26,14 +26,11 @@ brew install zbar
 poetry install --no-root
 ```
 
-### 3. macOS: make `zbar` discoverable
-On Apple Silicon, pyzbar may not find the Homebrew `zbar` library on the
-default loader path. Run scanning commands with:
-```bash
-DYLD_LIBRARY_PATH=/opt/homebrew/lib poetry run python main.py scan
-```
-> Only the `scan` command needs `zbar`. The management commands below work
-> without it.
+### 3. macOS note
+On Apple Silicon, pyzbar can't find the Homebrew `zbar` library on the default
+loader path. The app handles this automatically — when you run `scan` it adds
+`/opt/homebrew/lib` to the loader path and relaunches itself — so no extra
+setup or environment variables are needed.
 
 ## 🚀 Usage
 
@@ -47,6 +44,7 @@ python main.py <command> [options]
 | `list [--status S]` | List archived books, optionally filtered by status. |
 | `search <query>` | Search by ISBN, title, or author. |
 | `stats` | Show collection statistics. |
+| `export <path> [--status S]` | Export the collection (optionally filtered) to a CSV file. |
 | `remove <isbn>` | Remove a book by ISBN. |
 | `set-status <isbn> <status>` | Set a book's status. |
 
@@ -59,6 +57,8 @@ python main.py scan
 python main.py list --status wishlist
 python main.py search kazantzakis
 python main.py stats
+python main.py export my_books.csv
+python main.py export wishlist.csv --status wishlist
 python main.py set-status 9789601678375 read
 python main.py remove 9789601678375
 ```
