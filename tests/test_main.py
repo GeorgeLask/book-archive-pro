@@ -1,4 +1,4 @@
-from main import run_archiver
+from main import run_archiver, manual_entry
 
 
 def test_run_archiver_flow(mocker):
@@ -45,3 +45,46 @@ def test_run_archiver_skips_known_isbn(mocker):
 
     mock_api.fetch_by_isbn.assert_not_called()
     mock_db.save_book.assert_not_called()
+
+
+def test_manual_entry_accepts_book():
+    answers = iter(["y", "The Odyssey", "Homer"])
+    result = manual_entry("123", input_fn=lambda _: next(answers))
+
+    assert result["isbn"] == "123"
+    assert result["title"] == "The Odyssey"
+    assert result["authors"] == "Homer"
+    assert result["source"] == "manual"
+
+
+def test_manual_entry_declined_returns_none():
+    assert manual_entry("123", input_fn=lambda _: "n") is None
+
+
+def test_manual_entry_blank_title_returns_none():
+    answers = iter(["y", "   "])
+    assert manual_entry("123", input_fn=lambda _: next(answers)) is None
+
+
+def test_manual_entry_defaults_unknown_author():
+    answers = iter(["yes", "Some Title", ""])
+    result = manual_entry("123", input_fn=lambda _: next(answers))
+    assert result["authors"] == "Unknown"
+
+
+def test_run_archiver_uses_manual_entry_on_api_miss(mocker):
+    mock_scanner = mocker.Mock()
+    mock_api = mocker.Mock()
+    mock_db = mocker.Mock()
+
+    isbn = "555"
+    mock_db.load_isbns.return_value = set()
+    mock_scanner.scan.return_value = [isbn]
+    mock_api.fetch_by_isbn.return_value = None  # both providers miss
+
+    manual = {"isbn": isbn, "title": "Typed", "language": "unknown"}
+    mocker.patch("main.manual_entry", return_value=manual)
+
+    run_archiver(mock_scanner, mock_api, mock_db)
+
+    mock_db.save_book.assert_called_once_with(manual)

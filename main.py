@@ -3,6 +3,35 @@ from src.api_client import BookAPI
 from src.database import BookDatabase
 
 
+def manual_entry(isbn, input_fn=input):
+    """
+    Prompts the user to type book details when no API has the ISBN.
+    Returns a metadata dict, or None if the user chooses to skip
+    (declines or leaves the title blank).
+    """
+    answer = input_fn("    Add this book manually? [y/N]: ").strip().lower()
+    if answer not in ("y", "yes"):
+        return None
+
+    title = input_fn("    Title: ").strip()
+    if not title:
+        print("    No title entered; skipping.")
+        return None
+
+    authors = input_fn("    Author(s): ").strip() or "Unknown"
+    return {
+        "isbn": isbn,
+        "title": title,
+        "authors": authors,
+        "publisher": "N/A",
+        "published_date": "N/A",
+        "language": "unknown",
+        "page_count": 0,
+        "categories": "N/A",
+        "source": "manual",
+    }
+
+
 def run_archiver(scanner, api, db):
     """
     The Business Logic: Orchestrates the flow between
@@ -26,6 +55,10 @@ def run_archiver(scanner, api, db):
         # 1. Fetch metadata from Google Books
         book_info = api.fetch_by_isbn(isbn)
 
+        if not book_info:
+            print(f"[!] Metadata not found for ISBN {isbn}.")
+            book_info = manual_entry(isbn)
+
         if book_info:
             print(f"[*] Title: {book_info['title']} ({book_info['language']})")
 
@@ -34,7 +67,7 @@ def run_archiver(scanner, api, db):
             processed_isbns.add(isbn)
             print("[✔] Saved to archive.")
         else:
-            print(f"[!] Metadata not found for ISBN {isbn}. Skipping...")
+            print(f"[!] Skipping ISBN {isbn}.")
 
 
 def main():
