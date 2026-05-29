@@ -43,9 +43,7 @@ class BookDatabase:
         if not os.path.isfile(self.file_path):
             return set()
         try:
-            df = pd.read_csv(
-                self.file_path, encoding="utf-8-sig", dtype={"isbn": str}
-            )
+            df = pd.read_csv(self.file_path, encoding="utf-8-sig", dtype={"isbn": str})
         except (pd.errors.EmptyDataError, FileNotFoundError):
             return set()
         if "isbn" not in df.columns:
@@ -102,9 +100,7 @@ class BookDatabase:
         if not os.path.isfile(self.file_path):
             return pd.DataFrame(columns=self.SCHEMA)
         try:
-            df = pd.read_csv(
-                self.file_path, encoding="utf-8-sig", dtype={"isbn": str}
-            )
+            df = pd.read_csv(self.file_path, encoding="utf-8-sig", dtype={"isbn": str})
         except pd.errors.EmptyDataError:
             return pd.DataFrame(columns=self.SCHEMA)
         df = df.reindex(columns=self.SCHEMA)

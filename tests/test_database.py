@@ -78,10 +78,13 @@ def test_save_migrates_old_rows_to_current_schema(tmp_path):
 
 def _seed(tmp_path):
     db = BookDatabase(file_path=str(tmp_path / "lib.csv"))
-    db.save_book({"isbn": "111", "title": "Zorba", "authors": "Kazantzakis",
-                  "language": "el"})
-    db.save_book({"isbn": "222", "title": "1984", "authors": "Orwell",
-                  "language": "en"}, status="wishlist")
+    db.save_book(
+        {"isbn": "111", "title": "Zorba", "authors": "Kazantzakis", "language": "el"}
+    )
+    db.save_book(
+        {"isbn": "222", "title": "1984", "authors": "Orwell", "language": "en"},
+        status="wishlist",
+    )
     return db
 
 

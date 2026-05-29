@@ -68,7 +68,8 @@ python main.py remove 9789601678375
 ```bash
 poetry run pytest        # run the test suite
 poetry run ruff check .  # lint
+poetry run black .       # format
 ```
 
-The CI pipeline (GitHub Actions) runs ruff and the full test suite on every
-push and pull request to `main`.
+The CI pipeline (GitHub Actions) runs ruff, a black formatting check, and the
+full test suite on every push and pull request to `main`.

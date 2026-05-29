@@ -35,5 +35,8 @@ jobs:
     - name: Lint with Ruff
       run: poetry run ruff check .
 
+    - name: Check formatting with Black
+      run: poetry run black --check .
+
     - name: Run Tests
       run: poetry run pytest
