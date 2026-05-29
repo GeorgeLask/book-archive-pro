@@ -108,6 +108,20 @@ class BookDatabase:
             df[col] = df[col].fillna(default)
         return df
 
+    def export_to(self, path: str, status: str = None) -> int:
+        """
+        Writes the collection (optionally filtered by status) to `path` as a
+        clean UTF-8-sig CSV. Returns the number of rows written.
+        """
+        df = self.load_all()
+        if status:
+            df = df[df["status"].astype(str) == status]
+        export_dir = os.path.dirname(path)
+        if export_dir:
+            os.makedirs(export_dir, exist_ok=True)
+        df.to_csv(path, index=False, encoding="utf-8-sig", quoting=1)
+        return len(df)
+
     def search(self, query: str):
         """
         Case-insensitive substring match against isbn, title, and authors.
