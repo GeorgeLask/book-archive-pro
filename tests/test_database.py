@@ -76,6 +76,46 @@ def test_save_migrates_old_rows_to_current_schema(tmp_path):
     assert new["source"] == "google"
 
 
+def _seed(tmp_path):
+    db = BookDatabase(file_path=str(tmp_path / "lib.csv"))
+    db.save_book({"isbn": "111", "title": "Zorba", "authors": "Kazantzakis",
+                  "language": "el"})
+    db.save_book({"isbn": "222", "title": "1984", "authors": "Orwell",
+                  "language": "en"}, status="wishlist")
+    return db
+
+
+def test_load_all_empty_has_schema_columns(tmp_path):
+    db = BookDatabase(file_path=str(tmp_path / "none.csv"))
+    df = db.load_all()
+    assert df.empty
+    assert list(df.columns) == BookDatabase.SCHEMA
+
+
+def test_search_matches_title_author_isbn(tmp_path):
+    db = _seed(tmp_path)
+    assert set(db.search("zorba")["isbn"]) == {"111"}
+    assert set(db.search("orwell")["isbn"]) == {"222"}
+    assert set(db.search("222")["isbn"]) == {"222"}
+    assert db.search("nonexistent").empty
+
+
+def test_remove(tmp_path):
+    db = _seed(tmp_path)
+    assert db.remove("111") is True
+    assert db.exists("111") is False
+    assert db.exists("222") is True
+    assert db.remove("999") is False
+
+
+def test_set_status(tmp_path):
+    db = _seed(tmp_path)
+    assert db.set_status("111", "read") is True
+    df = db.load_all()
+    assert df[df["isbn"] == "111"].iloc[0]["status"] == "read"
+    assert db.set_status("999", "read") is False
+
+
 def test_exists_treats_isbn_as_string(tmp_path):
     # ISBNs are long numeric strings; make sure leading-zero / int coercion
     # does not break matching.
