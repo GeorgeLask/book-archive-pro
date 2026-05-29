@@ -80,11 +80,71 @@ class BookDatabase:
         else:
             combined = new_row
 
-        combined.to_csv(
+        self._write(combined)
+        return True
+
+    def _write(self, df):
+        """Writes the full DataFrame to disk in the canonical format."""
+        df.to_csv(
             self.file_path,
             index=False,
             encoding="utf-8-sig",
             sep=",",  # Standard comma
             quoting=1,  # Quote All: forces Excel to see separate cells
         )
+
+    def load_all(self):
+        """
+        Returns the whole archive as a DataFrame aligned to SCHEMA.
+        An empty (but correctly-columned) frame is returned if there is
+        no data yet.
+        """
+        if not os.path.isfile(self.file_path):
+            return pd.DataFrame(columns=self.SCHEMA)
+        try:
+            df = pd.read_csv(
+                self.file_path, encoding="utf-8-sig", dtype={"isbn": str}
+            )
+        except pd.errors.EmptyDataError:
+            return pd.DataFrame(columns=self.SCHEMA)
+        df = df.reindex(columns=self.SCHEMA)
+        for col, default in self.DEFAULTS.items():
+            df[col] = df[col].fillna(default)
+        return df
+
+    def search(self, query: str):
+        """
+        Case-insensitive substring match against isbn, title, and authors.
+        Returns a DataFrame of matching rows.
+        """
+        df = self.load_all()
+        if df.empty:
+            return df
+        q = str(query).lower()
+        mask = (
+            df["isbn"].astype(str).str.lower().str.contains(q, na=False)
+            | df["title"].astype(str).str.lower().str.contains(q, na=False)
+            | df["authors"].astype(str).str.lower().str.contains(q, na=False)
+        )
+        return df[mask]
+
+    def remove(self, isbn: str) -> bool:
+        """Removes the row with the given ISBN. Returns True if one was removed."""
+        df = self.load_all()
+        target = str(isbn)
+        keep = df["isbn"].astype(str) != target
+        if keep.all():
+            return False
+        self._write(df[keep])
+        return True
+
+    def set_status(self, isbn: str, status: str) -> bool:
+        """Updates the status of the given ISBN. Returns True if it was found."""
+        df = self.load_all()
+        target = str(isbn)
+        mask = df["isbn"].astype(str) == target
+        if not mask.any():
+            return False
+        df.loc[mask, "status"] = status
+        self._write(df)
         return True
