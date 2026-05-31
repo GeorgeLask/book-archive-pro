@@ -1,4 +1,12 @@
+import pytest
+
 from main import run_archiver, manual_entry
+
+
+@pytest.fixture(autouse=True)
+def _silence_sound(mocker):
+    """Stop tests from actually playing audio; return the mock for assertions."""
+    return mocker.patch("main.play_sound")
 
 
 def test_run_archiver_flow(mocker):
@@ -88,3 +96,30 @@ def test_run_archiver_uses_manual_entry_on_api_miss(mocker):
     run_archiver(mock_scanner, mock_api, mock_db)
 
     mock_db.save_book.assert_called_once_with(manual)
+
+
+def test_plays_ok_sound_on_save(mocker, _silence_sound):
+    mock_scanner = mocker.Mock()
+    mock_api = mocker.Mock()
+    mock_db = mocker.Mock()
+    mock_db.load_isbns.return_value = set()
+    mock_scanner.scan.return_value = ["123"]
+    mock_api.fetch_by_isbn.return_value = {"title": "T", "language": "en"}
+
+    run_archiver(mock_scanner, mock_api, mock_db)
+
+    _silence_sound.assert_called_with("ok")
+
+
+def test_plays_error_sound_when_skipped(mocker, _silence_sound):
+    mock_scanner = mocker.Mock()
+    mock_api = mocker.Mock()
+    mock_db = mocker.Mock()
+    mock_db.load_isbns.return_value = set()
+    mock_scanner.scan.return_value = ["123"]
+    mock_api.fetch_by_isbn.return_value = None
+    mocker.patch("main.manual_entry", return_value=None)  # user skips
+
+    run_archiver(mock_scanner, mock_api, mock_db)
+
+    _silence_sound.assert_called_with("error")

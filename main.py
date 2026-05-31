@@ -1,11 +1,40 @@
 import argparse
 import os
+import shutil
+import subprocess
 import sys
 
 import pandas as pd
 
 from src.api_client import BookAPI
 from src.database import BookDatabase
+
+# Short sounds played as scan feedback (macOS system sounds).
+_SOUNDS = {
+    "ok": "/System/Library/Sounds/Glass.aiff",
+    "error": "/System/Library/Sounds/Basso.aiff",
+}
+
+
+def play_sound(kind="ok"):
+    """
+    Plays a short confirmation sound so you know when to move the book away.
+    Best-effort and non-blocking: uses macOS `afplay` when available, falls
+    back to the terminal bell, and never raises.
+    """
+    try:
+        path = _SOUNDS.get(kind)
+        if sys.platform == "darwin" and path and shutil.which("afplay"):
+            subprocess.Popen(
+                ["afplay", path],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
+        else:
+            print("\a", end="", flush=True)
+    except Exception:
+        pass
+
 
 # On Apple Silicon, pyzbar can't find the Homebrew `zbar` library because
 # /opt/homebrew/lib isn't on the dynamic loader's search path.
@@ -74,7 +103,9 @@ def run_archiver(scanner, api, db):
 
     for isbn in scanner.scan():
         if isbn in processed_isbns:
+            # Already logged: still confirm so you know to move the book away.
             print(f"\n[=] ISBN {isbn} already in collection. Skipping.")
+            play_sound("ok")
             continue
 
         print(f"\n[+] Found ISBN: {isbn}")
@@ -93,8 +124,10 @@ def run_archiver(scanner, api, db):
             db.save_book(book_info)
             processed_isbns.add(isbn)
             print("[✔] Saved to archive.")
+            play_sound("ok")
         else:
             print(f"[!] Skipping ISBN {isbn}.")
+            play_sound("error")
 
 
 STATUSES = ["collection", "wishlist", "read", "lent"]

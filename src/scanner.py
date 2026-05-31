@@ -5,7 +5,7 @@ from pyzbar.pyzbar import decode
 
 
 class BarcodeScanner:
-    def __init__(self, camera_id=0, cooldown=2.0):
+    def __init__(self, camera_id=0, cooldown=3.0):
         self.camera_id = camera_id
         # Seconds to suppress re-emitting the same ISBN. While a book is held
         # to the camera the same barcode decodes ~30x/sec; the cooldown means

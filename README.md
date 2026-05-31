@@ -5,7 +5,7 @@ your webcam, fetch metadata automatically, and manage everything from the
 command line.
 
 ## ✨ Features
-- **Real-time barcode scanning** — OpenCV + pyzbar.
+- **Real-time barcode scanning** — OpenCV + pyzbar, with an audio cue on each successful read so you know when to move the book away.
 - **Automated metadata** — Google Books with an OpenLibrary fallback, plus
   manual entry when neither has the book.
 - **Duplicate-safe** — books already in the archive are skipped across runs.
