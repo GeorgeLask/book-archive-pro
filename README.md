@@ -55,6 +55,7 @@ python main.py <command> [options]
 | `stats` | Show collection statistics. |
 | `export <path> [--status S]` | Export the collection (optionally filtered). A `.xlsx` path writes a formatted Excel workbook; any other extension writes a UTF-8 CSV. |
 | `remove <isbn>` | Remove a book by ISBN. |
+| `clear [--status S] [--yes]` | Remove all books (or all with a status). Asks to confirm unless `--yes`. |
 | `set-status <isbn> <status>` | Set a book's status. |
 
 `--status` / `<status>` is one of `collection`, `wishlist`, `read`, `lent`.
