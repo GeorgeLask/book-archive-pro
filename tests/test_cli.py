@@ -75,6 +75,51 @@ def test_export_filtered_by_status(tmp_path, capsys):
     assert "Exported 1 book(s) (wishlist)" in output
 
 
+def test_clear_with_yes_flag(tmp_path, capsys):
+    path = _seed_file(tmp_path)
+    main.main(["--file", path, "clear", "--yes"])
+    out = capsys.readouterr().out
+    assert "Cleared 2" in out
+
+    from src.database import BookDatabase
+
+    assert BookDatabase(file_path=path).count() == 0
+
+
+def test_clear_aborts_when_declined(tmp_path, capsys, monkeypatch):
+    path = _seed_file(tmp_path)
+    monkeypatch.setattr("builtins.input", lambda _: "n")
+    main.main(["--file", path, "clear"])
+    out = capsys.readouterr().out
+    assert "Aborted." in out
+
+    from src.database import BookDatabase
+
+    assert BookDatabase(file_path=path).count() == 2  # nothing deleted
+
+
+def test_clear_confirmed_at_prompt(tmp_path, capsys, monkeypatch):
+    path = _seed_file(tmp_path)
+    monkeypatch.setattr("builtins.input", lambda _: "y")
+    main.main(["--file", path, "clear"])
+    out = capsys.readouterr().out
+    assert "Cleared 2" in out
+
+
+def test_clear_by_status(tmp_path, capsys):
+    path = _seed_file(tmp_path)
+    main.main(["--file", path, "clear", "--status", "wishlist", "--yes"])
+    out = capsys.readouterr().out
+    assert "Cleared 1 book(s) with status 'wishlist'" in out
+
+
+def test_clear_empty_scope(tmp_path, capsys):
+    path = _seed_file(tmp_path)
+    main.main(["--file", path, "clear", "--status", "read", "--yes"])
+    out = capsys.readouterr().out
+    assert "No books with status 'read' to clear." in out
+
+
 def test_remove(tmp_path, capsys):
     path = _seed_file(tmp_path)
     main.main(["--file", path, "remove", "111"])

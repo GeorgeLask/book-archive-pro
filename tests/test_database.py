@@ -134,6 +134,29 @@ def test_export_all_and_filtered(tmp_path):
     assert list(df["isbn"]) == ["222"]
 
 
+def test_clear_all(tmp_path):
+    db = _seed(tmp_path)
+    assert db.count() == 2
+    assert db.clear() == 2
+    assert db.count() == 0
+    assert db.load_all().empty
+
+
+def test_clear_by_status(tmp_path):
+    db = _seed(tmp_path)
+    assert db.clear(status="wishlist") == 1
+    assert db.count() == 1
+    assert db.exists("111") is True  # collection book kept
+    assert db.exists("222") is False  # wishlist book removed
+
+
+def test_count_filtered(tmp_path):
+    db = _seed(tmp_path)
+    assert db.count() == 2
+    assert db.count(status="wishlist") == 1
+    assert db.count(status="read") == 0
+
+
 def test_export_xlsx(tmp_path):
     import pandas as pd
 

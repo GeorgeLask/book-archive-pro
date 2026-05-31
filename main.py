@@ -177,6 +177,27 @@ def cmd_export(db, args):
     print(f"[✔] Exported {count} book(s){suffix} to {args.output}.")
 
 
+def cmd_clear(db, args, input_fn=None):
+    """Removes all books, or only those with a given status (with confirmation)."""
+    if input_fn is None:
+        input_fn = input
+    target = db.count(args.status)
+    if target == 0:
+        scope = f" with status '{args.status}'" if args.status else ""
+        print(f"No books{scope} to clear.")
+        return
+
+    scope = f" book(s) with status '{args.status}'" if args.status else " book(s)"
+    if not args.yes:
+        answer = input_fn(f"Delete {target}{scope}? This cannot be undone. [y/N]: ")
+        if answer.strip().lower() not in ("y", "yes"):
+            print("Aborted.")
+            return
+
+    removed = db.clear(args.status)
+    print(f"[✔] Cleared {removed}{scope}.")
+
+
 def cmd_remove(db, args):
     """Removes a book by ISBN."""
     if db.remove(args.isbn):
@@ -225,6 +246,16 @@ def build_parser():
     p_remove = sub.add_parser("remove", help="Remove a book by ISBN.")
     p_remove.add_argument("isbn", help="ISBN to remove.")
 
+    p_clear = sub.add_parser(
+        "clear", help="Remove all books, or all books with a given status."
+    )
+    p_clear.add_argument(
+        "--status", choices=STATUSES, help="Only clear books with this status."
+    )
+    p_clear.add_argument(
+        "--yes", action="store_true", help="Skip the confirmation prompt."
+    )
+
     p_status = sub.add_parser("set-status", help="Set a book's status.")
     p_status.add_argument("isbn", help="ISBN to update.")
     p_status.add_argument("status", choices=STATUSES, help="New status.")
@@ -238,6 +269,7 @@ COMMANDS = {
     "search": cmd_search,
     "stats": cmd_stats,
     "export": cmd_export,
+    "clear": cmd_clear,
     "remove": cmd_remove,
     "set-status": cmd_set_status,
 }

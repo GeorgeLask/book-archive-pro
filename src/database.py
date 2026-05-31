@@ -149,6 +149,29 @@ class BookDatabase:
                 width = min(max(len(v) for v in values) + 2, 60)
                 ws.column_dimensions[get_column_letter(i)].width = width
 
+    def clear(self, status: str = None) -> int:
+        """
+        Removes all books, or only those with the given status. Returns the
+        number of books removed.
+        """
+        df = self.load_all()
+        if status is None:
+            removed = len(df)
+            if os.path.isfile(self.file_path):
+                os.remove(self.file_path)
+            return removed
+        keep = df["status"].astype(str) != status
+        removed = int((~keep).sum())
+        self._write(df[keep])
+        return removed
+
+    def count(self, status: str = None) -> int:
+        """Returns the number of books, optionally filtered by status."""
+        df = self.load_all()
+        if status is not None:
+            df = df[df["status"].astype(str) == status]
+        return len(df)
+
     def search(self, query: str):
         """
         Case-insensitive substring match against isbn, title, and authors.
