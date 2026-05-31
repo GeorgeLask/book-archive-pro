@@ -134,6 +134,26 @@ def test_export_all_and_filtered(tmp_path):
     assert list(df["isbn"]) == ["222"]
 
 
+def test_export_xlsx(tmp_path):
+    import pandas as pd
+
+    db = _seed(tmp_path)
+    out = tmp_path / "books.xlsx"
+    assert db.export_to(str(out)) == 2
+    assert out.exists()
+
+    df = pd.read_excel(out, dtype={"isbn": str})
+    assert list(df.columns) == BookDatabase.SCHEMA
+    assert set(df["isbn"]) == {"111", "222"}
+
+    # Header is bold and frozen below row 1.
+    from openpyxl import load_workbook
+
+    ws = load_workbook(out)["Books"]
+    assert ws["A1"].font.bold is True
+    assert ws.freeze_panes == "A2"
+
+
 def test_exists_treats_isbn_as_string(tmp_path):
     # ISBNs are long numeric strings; make sure leading-zero / int coercion
     # does not break matching.

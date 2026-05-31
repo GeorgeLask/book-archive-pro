@@ -110,8 +110,11 @@ class BookDatabase:
 
     def export_to(self, path: str, status: str = None) -> int:
         """
-        Writes the collection (optionally filtered by status) to `path` as a
-        clean UTF-8-sig CSV. Returns the number of rows written.
+        Writes the collection (optionally filtered by status) to `path`.
+
+        A `.xlsx` path produces a formatted Excel workbook (bold header, frozen
+        header row, auto-sized columns); any other extension produces a clean
+        UTF-8-sig CSV. Returns the number of rows written.
         """
         df = self.load_all()
         if status:
@@ -119,8 +122,32 @@ class BookDatabase:
         export_dir = os.path.dirname(path)
         if export_dir:
             os.makedirs(export_dir, exist_ok=True)
-        df.to_csv(path, index=False, encoding="utf-8-sig", quoting=1)
+
+        if path.lower().endswith(".xlsx"):
+            self._write_xlsx(df, path)
+        else:
+            df.to_csv(path, index=False, encoding="utf-8-sig", quoting=1)
         return len(df)
+
+    def _write_xlsx(self, df, path):
+        """Writes a DataFrame to a formatted .xlsx workbook."""
+        from openpyxl.styles import Font
+        from openpyxl.utils import get_column_letter
+
+        with pd.ExcelWriter(path, engine="openpyxl") as writer:
+            df.to_excel(writer, index=False, sheet_name="Books")
+            ws = writer.sheets["Books"]
+
+            # Bold the header row and freeze it so it stays visible on scroll.
+            for cell in ws[1]:
+                cell.font = Font(bold=True)
+            ws.freeze_panes = "A2"
+
+            # Size each column to its widest value (capped for very long text).
+            for i, col in enumerate(df.columns, start=1):
+                values = [str(col)] + [str(v) for v in df[col]]
+                width = min(max(len(v) for v in values) + 2, 60)
+                ws.column_dimensions[get_column_letter(i)].width = width
 
     def search(self, query: str):
         """

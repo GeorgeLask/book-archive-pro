@@ -58,6 +58,15 @@ def test_export(tmp_path, capsys):
     assert out.exists()
 
 
+def test_export_xlsx(tmp_path, capsys):
+    path = _seed_file(tmp_path)
+    out = tmp_path / "books.xlsx"
+    main.main(["--file", path, "export", str(out)])
+    output = capsys.readouterr().out
+    assert "Exported 2 book(s)" in output
+    assert out.exists()
+
+
 def test_export_filtered_by_status(tmp_path, capsys):
     path = _seed_file(tmp_path)
     out = tmp_path / "wishlist.csv"
