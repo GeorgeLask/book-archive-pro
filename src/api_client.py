@@ -27,17 +27,58 @@ class BookAPI:
         # The provider chain; order is the fallback priority.
         self.providers = [self._fetch_google, self._fetch_openlibrary]
 
+    # Metadata fields checked for completeness / gap-filling (isbn and source
+    # are excluded; they aren't "missing" in a meaningful sense).
+    _METADATA_FIELDS = (
+        "title",
+        "authors",
+        "publisher",
+        "published_date",
+        "language",
+        "page_count",
+        "categories",
+    )
+    # Values that mean "no real data" for a field.
+    _PLACEHOLDERS = {"n/a", "unknown", ""}
+
+    def _is_missing(self, value) -> bool:
+        if value in (None, 0):
+            return True
+        return str(value).strip().lower() in self._PLACEHOLDERS
+
+    def _is_complete(self, book: dict) -> bool:
+        return not any(self._is_missing(book.get(f)) for f in self._METADATA_FIELDS)
+
+    def _merge(self, base: dict, extra: dict) -> dict:
+        """Fills fields that are missing in `base` with values from `extra`."""
+        for field in self._METADATA_FIELDS:
+            if self._is_missing(base.get(field)) and not self._is_missing(
+                extra.get(field)
+            ):
+                base[field] = extra[field]
+        return base
+
     def fetch_by_isbn(self, isbn: str):
-        """Returns a normalised metadata dict, or None if no provider has it."""
+        """
+        Returns a normalised metadata dict, or None if no provider has it.
+
+        Providers are queried in order and their results merged so each fills
+        gaps the others leave (e.g. OpenLibrary supplying a publisher Google
+        lacks). Querying stops early once every field is populated.
+        """
+        merged = None
         for provider in self.providers:
             try:
                 result = provider(isbn)
             except requests.exceptions.RequestException as e:
                 print(f"Connection error ({provider.__name__}): {e}")
                 continue
-            if result:
-                return result
-        return None
+            if not result:
+                continue
+            merged = result if merged is None else self._merge(merged, result)
+            if self._is_complete(merged):
+                break
+        return merged
 
     def _request(self, url, params):
         """

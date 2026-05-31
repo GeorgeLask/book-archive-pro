@@ -76,6 +76,49 @@ def test_falls_back_to_openlibrary_when_google_empty(mocker):
     assert result["source"] == "openlibrary"
 
 
+def test_merges_openlibrary_into_google_gaps(mocker):
+    api = BookAPI()
+    isbn = "123"
+
+    # Google has core fields but lacks publisher / pages / categories.
+    google = _mock_response(
+        mocker,
+        {
+            "items": [
+                {
+                    "volumeInfo": {
+                        "title": "The Book",
+                        "authors": ["An Author"],
+                        "published_date": "2020",
+                        "language": "en",
+                    }
+                }
+            ]
+        },
+    )
+    ol = _mock_response(
+        mocker,
+        {
+            f"ISBN:{isbn}": {
+                "title": "The Book",
+                "publishers": [{"name": "Faber"}],
+                "number_of_pages": 200,
+                "subjects": [{"name": "Fiction"}],
+            }
+        },
+    )
+    mocker.patch("requests.get", side_effect=[google, ol])
+
+    result = api.fetch_by_isbn(isbn)
+
+    # Google stays the base (source/title/language), OpenLibrary fills the gaps.
+    assert result["source"] == "google"
+    assert result["language"] == "en"
+    assert result["publisher"] == "Faber"
+    assert result["page_count"] == 200
+    assert result["categories"] == "Fiction"
+
+
 def test_google_retries_on_429_then_succeeds(mocker):
     api = BookAPI()
     sleep = mocker.patch("time.sleep")
@@ -83,8 +126,9 @@ def test_google_retries_on_429_then_succeeds(mocker):
     success = _mock_response(
         mocker, {"items": [{"volumeInfo": {"title": "Recovered", "language": "en"}}]}
     )
-    # First Google call is rate-limited, retry succeeds.
-    mocker.patch("requests.get", side_effect=[_mock_429(mocker), success])
+    # Google: rate-limited then succeeds; OpenLibrary then queried to fill gaps.
+    ol_empty = _mock_response(mocker, {})
+    mocker.patch("requests.get", side_effect=[_mock_429(mocker), success, ol_empty])
 
     result = api.fetch_by_isbn("123")
 
@@ -122,8 +166,12 @@ def test_api_key_added_when_env_set(mocker, monkeypatch):
 
     api.fetch_by_isbn("123")
 
-    _, kwargs = get.call_args
-    assert kwargs["params"].get("key") == "secret123"
+    # The Google request (to GOOGLE_URL) should carry the key.
+    google_calls = [
+        c for c in get.call_args_list if c.args and c.args[0] == BookAPI.GOOGLE_URL
+    ]
+    assert google_calls
+    assert google_calls[0].kwargs["params"].get("key") == "secret123"
 
 
 def test_fetch_by_isbn_not_found_anywhere(mocker):
