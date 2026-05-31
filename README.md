@@ -53,7 +53,7 @@ python main.py <command> [options]
 | `list [--status S]` | List archived books, optionally filtered by status. |
 | `search <query>` | Search by ISBN, title, or author. |
 | `stats` | Show collection statistics. |
-| `export <path> [--status S]` | Export the collection (optionally filtered) to a CSV file. |
+| `export <path> [--status S]` | Export the collection (optionally filtered). A `.xlsx` path writes a formatted Excel workbook; any other extension writes a UTF-8 CSV. |
 | `remove <isbn>` | Remove a book by ISBN. |
 | `set-status <isbn> <status>` | Set a book's status. |
 
@@ -66,8 +66,9 @@ python main.py scan
 python main.py list --status wishlist
 python main.py search kazantzakis
 python main.py stats
-python main.py export my_books.csv
-python main.py export wishlist.csv --status wishlist
+python main.py export my_books.xlsx              # formatted Excel workbook
+python main.py export wishlist.xlsx --status wishlist
+python main.py export my_books.csv               # plain CSV
 python main.py set-status 9789601678375 read
 python main.py remove 9789601678375
 ```
