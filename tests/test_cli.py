@@ -75,6 +75,37 @@ def test_export_filtered_by_status(tmp_path, capsys):
     assert "Exported 1 book(s) (wishlist)" in output
 
 
+def test_parse_selection():
+    assert main._parse_selection("1,3 5", 5) == [0, 2, 4]
+    assert main._parse_selection("2, 2, 2", 5) == [1]  # de-duplicated
+    assert main._parse_selection("0 9 abc", 5) == []  # out of range / non-numeric
+    assert main._parse_selection("", 5) == []
+
+
+def test_mark_read_selection(tmp_path, capsys, monkeypatch):
+    path = _seed_file(tmp_path)
+    monkeypatch.setattr("builtins.input", lambda _: "1")  # pick first listed book
+    main.main(["--file", path, "mark-read"])
+    out = capsys.readouterr().out
+    assert "Marked 1 book(s) as read." in out
+
+    from src.database import BookDatabase
+
+    assert BookDatabase(file_path=path).count(status="read") == 1
+
+
+def test_mark_read_cancel(tmp_path, capsys, monkeypatch):
+    path = _seed_file(tmp_path)
+    monkeypatch.setattr("builtins.input", lambda _: "")  # blank cancels
+    main.main(["--file", path, "mark-read"])
+    out = capsys.readouterr().out
+    assert "Nothing selected." in out
+
+    from src.database import BookDatabase
+
+    assert BookDatabase(file_path=path).count(status="read") == 0
+
+
 def test_clear_with_yes_flag(tmp_path, capsys):
     path = _seed_file(tmp_path)
     main.main(["--file", path, "clear", "--yes"])

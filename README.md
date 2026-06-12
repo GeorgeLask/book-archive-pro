@@ -57,6 +57,7 @@ python main.py <command> [options]
 | `remove <isbn>` | Remove a book by ISBN. |
 | `clear [--status S] [--yes]` | Remove all books (or all with a status). Asks to confirm unless `--yes`. |
 | `set-status <isbn> <status>` | Set a book's status. |
+| `mark-read` | Interactively pick books from the collection to mark as read. |
 
 `--status` / `<status>` is one of `collection`, `wishlist`, `read`, `lent`.
 Use `--file PATH` to point at a different archive (default `data/library.csv`).
