@@ -157,6 +157,20 @@ def test_count_filtered(tmp_path):
     assert db.count(status="read") == 0
 
 
+def test_set_status_many(tmp_path):
+    db = _seed(tmp_path)
+    updated = db.set_status_many(["111", "222"], "read")
+    assert updated == 2
+    df = db.load_all()
+    assert (df["status"] == "read").all()
+
+
+def test_set_status_many_ignores_unknown(tmp_path):
+    db = _seed(tmp_path)
+    assert db.set_status_many(["111", "999"], "read") == 1
+    assert db.set_status_many([], "read") == 0
+
+
 def test_export_xlsx(tmp_path):
     import pandas as pd
 

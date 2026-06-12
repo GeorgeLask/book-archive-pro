@@ -208,3 +208,19 @@ class BookDatabase:
         df.loc[mask, "status"] = status
         self._write(df)
         return True
+
+    def set_status_many(self, isbns, status: str) -> int:
+        """
+        Sets the status for several ISBNs in a single rewrite. Returns the
+        number of rows updated.
+        """
+        targets = {str(i) for i in isbns}
+        if not targets:
+            return 0
+        df = self.load_all()
+        mask = df["isbn"].astype(str).isin(targets)
+        if not mask.any():
+            return 0
+        df.loc[mask, "status"] = status
+        self._write(df)
+        return int(mask.sum())

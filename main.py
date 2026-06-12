@@ -210,6 +210,46 @@ def cmd_export(db, args):
     print(f"[✔] Exported {count} book(s){suffix} to {args.output}.")
 
 
+def _parse_selection(raw, count):
+    """
+    Parses a user selection like "1,3 5" into a sorted list of unique 0-based
+    indices within range. Invalid or out-of-range tokens are ignored.
+    """
+    indices = []
+    for token in raw.replace(",", " ").split():
+        if token.isdigit():
+            n = int(token)
+            if 1 <= n <= count:
+                indices.append(n - 1)
+    return sorted(set(indices))
+
+
+def cmd_mark_read(db, args, input_fn=None):
+    """Interactively pick books from the collection and mark them as read."""
+    if input_fn is None:
+        input_fn = input
+
+    df = db.load_all().reset_index(drop=True)
+    if df.empty:
+        print("Archive is empty.")
+        return
+
+    for i, row in df.iterrows():
+        title = str(row["title"])[:40]
+        marker = "✓" if str(row["status"]) == "read" else " "
+        print(f"{i + 1:>3}. [{marker}] {row['isbn']:<15} {title:<40}")
+
+    raw = input_fn("\nNumber(s) to mark as read (e.g. 1,3), blank to cancel: ")
+    chosen = _parse_selection(raw, len(df))
+    if not chosen:
+        print("Nothing selected.")
+        return
+
+    isbns = [df.iloc[i]["isbn"] for i in chosen]
+    updated = db.set_status_many(isbns, "read")
+    print(f"[✔] Marked {updated} book(s) as read.")
+
+
 def cmd_clear(db, args, input_fn=None):
     """Removes all books, or only those with a given status (with confirmation)."""
     if input_fn is None:
@@ -293,6 +333,8 @@ def build_parser():
     p_status.add_argument("isbn", help="ISBN to update.")
     p_status.add_argument("status", choices=STATUSES, help="New status.")
 
+    sub.add_parser("mark-read", help="Interactively pick books to mark as read.")
+
     return parser
 
 
@@ -305,6 +347,7 @@ COMMANDS = {
     "clear": cmd_clear,
     "remove": cmd_remove,
     "set-status": cmd_set_status,
+    "mark-read": cmd_mark_read,
 }
 
 
