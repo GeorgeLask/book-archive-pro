@@ -174,3 +174,41 @@ def test_set_status_unknown_isbn(tmp_path, capsys):
     main.main(["--file", path, "set-status", "999", "read"])
     out = capsys.readouterr().out
     assert "not found" in out
+
+
+def test_rate(tmp_path, capsys):
+    path = _seed_file(tmp_path)
+    main.main(["--file", path, "rate", "111", "8"])
+    out = capsys.readouterr().out
+    assert "rated 8/10" in out
+
+    from src.database import BookDatabase
+
+    df = BookDatabase(file_path=path).load_all()
+    assert int(df[df["isbn"] == "111"].iloc[0]["rating"]) == 8
+
+
+def test_rate_unknown_isbn(tmp_path, capsys):
+    path = _seed_file(tmp_path)
+    main.main(["--file", path, "rate", "999", "8"])
+    out = capsys.readouterr().out
+    assert "not found" in out
+
+
+def test_rate_rejects_out_of_range(tmp_path, capsys):
+    import pytest
+
+    path = _seed_file(tmp_path)
+    # argparse rejects an invalid rating by exiting (SystemExit).
+    with pytest.raises(SystemExit):
+        main.main(["--file", path, "rate", "111", "15"])
+
+
+def test_stats_shows_average_rating(tmp_path, capsys):
+    path = _seed_file(tmp_path)
+    main.main(["--file", path, "rate", "111", "8"])
+    main.main(["--file", path, "rate", "222", "6"])
+    capsys.readouterr()  # clear
+    main.main(["--file", path, "stats"])
+    out = capsys.readouterr().out
+    assert "Rated books: 2 (avg 7.0/10)" in out

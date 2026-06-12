@@ -119,6 +119,40 @@ def test_set_status(tmp_path):
     assert db.set_status("999", "read") is False
 
 
+def test_set_rating(tmp_path):
+    db = _seed(tmp_path)
+    assert db.set_rating("111", 9) is True
+    df = db.load_all()
+    assert int(df[df["isbn"] == "111"].iloc[0]["rating"]) == 9
+    # Unrated books keep the empty default.
+    assert str(df[df["isbn"] == "222"].iloc[0]["rating"]) == ""
+    assert db.set_rating("999", 5) is False
+
+
+def test_set_rating_rejects_out_of_range(tmp_path):
+    import pytest
+
+    db = _seed(tmp_path)
+    for bad in (0, 11, -3):
+        with pytest.raises(ValueError):
+            db.set_rating("111", bad)
+
+
+def test_rating_column_migrates(tmp_path):
+    import pandas as pd
+
+    # A file written before the rating column existed.
+    legacy = tmp_path / "lib.csv"
+    pd.DataFrame([{"isbn": "111", "title": "Old", "authors": "A"}]).to_csv(
+        legacy, index=False, encoding="utf-8-sig"
+    )
+
+    db = BookDatabase(file_path=str(legacy))
+    df = db.load_all()
+    assert "rating" in df.columns
+    assert str(df.iloc[0]["rating"]) == ""  # backfilled as unrated
+
+
 def test_export_all_and_filtered(tmp_path):
     import pandas as pd
 
