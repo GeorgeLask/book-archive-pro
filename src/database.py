@@ -16,6 +16,7 @@ class BookDatabase:
         "categories",
         "source",
         "status",
+        "rating",
     ]
     DEFAULTS = {
         "isbn": "",
@@ -28,7 +29,13 @@ class BookDatabase:
         "categories": "N/A",
         "source": "unknown",
         "status": "collection",
+        # Empty means unrated; a set rating is an integer 1-10.
+        "rating": "",
     }
+
+    # Valid rating range, inclusive.
+    MIN_RATING = 1
+    MAX_RATING = 10
 
     def __init__(self, file_path="data/library.csv"):
         self.file_path = file_path
@@ -224,3 +231,21 @@ class BookDatabase:
         df.loc[mask, "status"] = status
         self._write(df)
         return int(mask.sum())
+
+    def set_rating(self, isbn: str, rating: int) -> bool:
+        """
+        Sets the 1-10 rating for the given ISBN. Returns True if the book was
+        found. Raises ValueError if the rating is out of range.
+        """
+        if not (self.MIN_RATING <= rating <= self.MAX_RATING):
+            raise ValueError(
+                f"Rating must be between {self.MIN_RATING} and {self.MAX_RATING}."
+            )
+        df = self.load_all()
+        target = str(isbn)
+        mask = df["isbn"].astype(str) == target
+        if not mask.any():
+            return False
+        df.loc[mask, "rating"] = rating
+        self._write(df)
+        return True

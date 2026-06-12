@@ -133,7 +133,7 @@ def run_archiver(scanner, api, db):
 STATUSES = ["collection", "wishlist", "read", "lent"]
 
 # Columns shown in list/search tables (the full schema is still stored).
-DISPLAY_COLUMNS = ["isbn", "title", "authors", "language", "status"]
+DISPLAY_COLUMNS = ["isbn", "title", "authors", "language", "status", "rating"]
 
 
 def _print_table(df):
@@ -189,6 +189,10 @@ def cmd_stats(db, args):
     pages = pd.to_numeric(df["page_count"], errors="coerce").fillna(0).sum()
     print(f"Total books: {total}")
     print(f"Total pages: {int(pages)}")
+
+    ratings = pd.to_numeric(df["rating"], errors="coerce").dropna()
+    if len(ratings):
+        print(f"Rated books: {len(ratings)} (avg {ratings.mean():.1f}/10)")
 
     print("\nBy status:")
     for status, count in df["status"].value_counts().items():
@@ -287,6 +291,25 @@ def cmd_set_status(db, args):
         print(f"[!] ISBN {args.isbn} not found.")
 
 
+def _rating_arg(value):
+    """Argparse type: accept only integers in the 1-10 rating range."""
+    try:
+        rating = int(value)
+    except ValueError:
+        raise argparse.ArgumentTypeError("rating must be an integer from 1 to 10")
+    if not (BookDatabase.MIN_RATING <= rating <= BookDatabase.MAX_RATING):
+        raise argparse.ArgumentTypeError("rating must be between 1 and 10")
+    return rating
+
+
+def cmd_rate(db, args):
+    """Sets a 1-10 rating for a book by ISBN."""
+    if db.set_rating(args.isbn, args.rating):
+        print(f"[✔] ISBN {args.isbn} rated {args.rating}/10.")
+    else:
+        print(f"[!] ISBN {args.isbn} not found.")
+
+
 def build_parser():
     parser = argparse.ArgumentParser(
         description="Book Archive Pro - scan and manage your book collection."
@@ -335,6 +358,10 @@ def build_parser():
 
     sub.add_parser("mark-read", help="Interactively pick books to mark as read.")
 
+    p_rate = sub.add_parser("rate", help="Rate a book from 1 to 10.")
+    p_rate.add_argument("isbn", help="ISBN to rate.")
+    p_rate.add_argument("rating", type=_rating_arg, help="Rating from 1 to 10.")
+
     return parser
 
 
@@ -348,6 +375,7 @@ COMMANDS = {
     "remove": cmd_remove,
     "set-status": cmd_set_status,
     "mark-read": cmd_mark_read,
+    "rate": cmd_rate,
 }
 
 

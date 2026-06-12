@@ -58,6 +58,7 @@ python main.py <command> [options]
 | `clear [--status S] [--yes]` | Remove all books (or all with a status). Asks to confirm unless `--yes`. |
 | `set-status <isbn> <status>` | Set a book's status. |
 | `mark-read` | Interactively pick books from the collection to mark as read. |
+| `rate <isbn> <1-10>` | Rate a book from 1 to 10. |
 
 `--status` / `<status>` is one of `collection`, `wishlist`, `read`, `lent`.
 Use `--file PATH` to point at a different archive (default `data/library.csv`).
@@ -72,6 +73,7 @@ python main.py export my_books.xlsx              # formatted Excel workbook
 python main.py export wishlist.xlsx --status wishlist
 python main.py export my_books.csv               # plain CSV
 python main.py set-status 9789601678375 read
+python main.py rate 9789601678375 9
 python main.py remove 9789601678375
 ```
 
